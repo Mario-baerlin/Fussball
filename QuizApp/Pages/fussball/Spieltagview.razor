@@ -1,0 +1,151 @@
+﻿@page "/"
+@inject ISpieltagService spieltagservice
+@inject IMatchService matchservice
+@inject ILigaService ligaservice
+@inject NavigationManager navManager
+<h3>Spieltag</h3>
+<EditForm Model="liga">
+    <div class="row">
+        <div class="col-3">
+            <label> Liga: </label>
+            <InputSelect ValueExpression="@(()=>ligastring)" ValueChanged="@((string value) => OnValueChanged(value ))" class="form-control" id="sel1">
+
+                @foreach (var item in ligen)
+                {
+                    <option value="@item.LigaGuid">@item.LigaName</option>}
+
+            </InputSelect>
+        </div>
+        <div class="col-3">
+            <label> Saison: </label>
+            <InputSelect ValueExpression="@(()=>saisonstring)" ValueChanged="@((string value) => OnValueChanged2(value ))" class="form-control" id="sel1">
+                <option>21/22</option>
+                <option>20/21</option>
+                <option>19/20</option>
+                <option>18/19</option>
+
+            </InputSelect>
+        </div>
+    </div>
+</EditForm>
+
+
+
+<div class="yourclass">
+    @foreach (var item in spieltagedupe)
+    {
+        <button class="btn btn-info" @onclick="() => setDate(item)">@*@item.Datum.ToString("dd/MM/yyyy")*@ @item.Spieltagzahl</button>
+    }
+</div>
+
+<div>
+   
+        <div class="row">
+            <h1>Liga:</h1>
+        </div>
+        <div class="row">
+            @foreach (var item2 in matchesdupe)
+            {
+                //if (item.LigaGuid == item2.LigaId)
+                //{
+                    <div class="col-3 matchbox">
+                        <h2>@item2.Mannschaft1 : @item2.Tore_Mannschaft1 </h2>
+                        <h2>@item2.Mannschaf2 : @item2.Tore_Mannschaft2 </h2>
+                    </div>
+                @*}*@
+            }
+        </div>
+   
+</div>
+
+
+@code {
+    List<Liga> ligen = new List<Liga>();
+    List<Liga> ligendupe = new List<Liga>();
+    List<Spieltag> spieltage = new List<Spieltag>();
+    List<Spieltag> spieltagedupe = new List<Spieltag>();
+    List<Match> matches = new List<Match>();
+    List<Match> matchesdupe = new List<Match>();
+    Guid currentDate;
+    Liga liga = new Liga();
+    string ligastring;
+    string saisonstring = "21/22";
+    HashSet<Guid> LigenGuids = new HashSet<Guid>();
+
+    private Task OnValueChanged(string value)
+    {
+
+
+        // Assign the selected value to the Model 
+        ligastring = value;
+        Guid ligaguid = new Guid(ligastring);
+        spieltagedupe = new List<Spieltag>();
+        spieltagedupe = spieltage.Where(x => x.LigaGuid == ligaguid && saisonstring == x.Season).ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+
+    }
+    private Task OnValueChanged2(string value)
+    {
+        // Assign the selected value to the Model 
+        saisonstring = value;
+        Guid ligaguid = new Guid(ligastring);
+        spieltagedupe = new List<Spieltag>();
+        spieltagedupe = spieltage.Where(x => x.Season == saisonstring && x.LigaGuid == ligaguid).ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    public void setDate(Spieltag tag)
+    {
+        Guid ligaguid = new Guid(ligastring);
+        currentDate = tag.SpieltagGuid;
+        matchesdupe.Clear();
+        ligendupe.Clear();
+        LigenGuids.Clear();
+        matchesdupe = matches.Where(x => x.SpieltagGuid == currentDate && x.LigaId == ligaguid).ToList();
+        //foreach (var item2 in matchesdupe)
+        //{
+        //    LigenGuids.Add(item2.LigaId);
+        //}
+
+
+        //foreach (var item3 in ligen)
+        //{
+        //    foreach (var item in LigenGuids)
+        //    {
+        //        if (item3.LigaGuid == item)
+        //        {
+        //            ligendupe.Add(item3);
+        //        }
+        //    }
+        //}
+
+
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ligen = await ligaservice.GetAllAsync();
+        ligastring = ligen.First().LigaGuid.ToString();
+        spieltage = await spieltagservice.GetAllAsync();
+        Guid ligaguid = new Guid(ligastring);
+        spieltagedupe = spieltage.Where(x => x.Season == saisonstring && x.LigaGuid == ligaguid).ToList();
+        matches = await matchservice.GetAllAsync();
+
+
+    }
+}
+
+<style>
+    .matchbox {
+        border: 0px solid #D2797B;
+        box-shadow: 10px 10px 10px 0px #79A5D2;
+        background-color: lightblue;
+        margin-right: 10px;
+        text-align: center;
+    }
+
+    .yourclass{margin-top: 24px;}
+</style>

@@ -1,0 +1,72 @@
+﻿@page "/fussball/indexverein"
+
+@inject IVereinService service
+@inject NavigationManager navManager
+
+<h3> Spieltage </h3>
+
+@if (vereine == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <a href="/verein/create" class="btn btn-info">Create Verein</a>
+    <br />
+    <br />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Vereinsname</th>
+               <th>Liga</th>
+                <th>Status</th>
+                <th>Edit</th>
+                <th> Delete </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var verein in vereine)
+            {
+            <tr>
+                <td>@verein.VereinName</td>
+                <td>@verein.LigaName</td>
+                <td>@if (verein.active == "true")
+                {
+                    <p>Aktiv</p>
+                }
+                else
+	                {
+	                <p>Deaktiviert</p>
+	                }</td>
+                <td> <a href="/verein/create/@verein.VereinGuid.ToString()" class="btn btn-info">Edit</a> </td>
+                <td> <button @onclick="() => Delete(verein)" class="btn btn-danger">Delete</button> </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+
+    List<Verein> vereine;
+
+    protected override async Task OnInitializedAsync()
+    {
+        vereine = await service.GetAllAsync();
+    }
+
+    private void GoToCreatePage()
+    {
+        navManager.NavigateTo("fussball/createverein");
+    }
+
+    private async void Delete(Verein verein)
+    {
+        await service.DeleteAsync(verein);
+        vereine = await service.GetAllAsync();
+        StateHasChanged();
+    }
+
+}

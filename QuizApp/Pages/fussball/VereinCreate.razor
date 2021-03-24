@@ -1,0 +1,76 @@
+﻿@page "/verein/create"
+
+@inject IVereinService service
+@inject ILigaService service2
+@inject NavigationManager navManager
+
+<h3> Create Verein </h3>
+
+<EditForm Model="verein">
+
+    @*@if (ShowAlert)
+            {
+        <div class="alert alert-warning" role="alert">
+            Check if you picked the right Saison to the Date
+        </div>}
+            @if (ShowAlert2)
+            {
+        <div class="alert alert-warning" role="alert">
+            Der Spieltag muss zwischen 1 und 34 sein.
+        </div>}*@
+
+
+    <div class="row">
+        <div class="col-6">
+            <div class="form-group">
+                <label> Verein: </label>
+                <InputText @bind-Value="verein.VereinName" class="form-control" />
+                <InputSelect class="form-control topdi" id="sel1" @bind-Value="ligastring">
+                    @foreach (var item in Ligen)
+                    {
+            <option value="@item.LigaGuid">@item.LigaName</option>}
+
+                </InputSelect>
+            </div>
+            <div class="form-group topdi">
+                <button type="button" class="btn btn-primary" @onclick="Save">Save Verein</button>
+            </div>
+        </div>
+    </div>
+
+</EditForm>
+
+
+@code { 
+    string ligastring;
+
+    List<Liga> Ligen = new List<Liga>();
+    Verein verein = new Verein();
+    //bool ShowAlert = false;
+    //bool ShowAlert2 = false;
+    Liga liga = new Liga();
+    protected override async Task OnInitializedAsync()
+    {
+        Ligen = await service2.GetAllAsync();
+        Liga liga = new Liga();
+        liga = Ligen.First();
+        ligastring = liga.LigaGuid.ToString();
+    }
+    async void Save()
+    {
+        liga = await service2.GetAsync(verein.LigaGuid);
+
+
+        Guid ligaguid = new Guid(ligastring);
+        verein.LigaGuid = ligaguid;
+        liga = await service2.GetAsync(verein.LigaGuid);
+        verein.LigaName = liga.LigaName;
+        await service.AddAsync(verein);
+        navManager.NavigateTo("fussball/indexverein");
+    } }
+
+<style>
+    .topdi{
+        margin-top:24px;
+    }
+</style>

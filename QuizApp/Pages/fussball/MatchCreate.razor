@@ -1,0 +1,235 @@
+﻿@page "/match/create"
+@using QuizApp.Data
+@inject IMatchService service
+@inject ISpieltagService service2
+@inject ILigaService service3
+@inject IVereinService service4
+@inject ITorjägerService service5
+@inject NavigationManager navManager
+
+<h3> Create Matches </h3>
+
+<EditForm Model="match">
+       
+    <div class="form-group">
+        <div class="row">
+            <div class="col-3">
+                <label> Verein 1: </label>
+                @*<InputText @bind-Value="match.Mannschaft1" class="form-control" />*@
+
+                <BlazoredTypeahead SearchMethod="GetPeopleLocal" @bind-Value="match.SelectedVerein" EnableDropDown="true"
+                                   MinimumLength="1"
+                                   placeholder="Search by first name...">
+                    <SelectedTemplate Context="verein">
+                        @verein.VereinName
+                    </SelectedTemplate>
+                    <HelpTemplate>
+                        Please enter at least 3 character to perform a search.
+                    </HelpTemplate>
+                    <ResultTemplate Context="verein">
+                        @verein.VereinName
+                    </ResultTemplate>
+                </BlazoredTypeahead>
+
+
+            </div>
+            <div class="col-3">
+                <label> Tore Mannschaft 1: </label>
+                <InputNumber @bind-Value="match.Tore_Mannschaft1" class="form-control" />
+            </div>
+
+        </div>
+        <div class="row">
+            <div class="col-3">
+                <label> Verein 2: </label>
+                @*<InputText @bind-Value="match.Mannschaf2" class="form-control" />*@
+                <BlazoredTypeahead SearchMethod="GetPeopleLocal" @bind-Value="match.SelectedVerein2" EnableDropDown="true"
+                                   MinimumLength="1"
+                                   placeholder="Search by first name...">
+                    <SelectedTemplate Context="verein">
+                        @verein.VereinName
+                    </SelectedTemplate>
+                    <HelpTemplate>
+                        Please enter at least 3 character to perform a search.
+                    </HelpTemplate>
+                    <ResultTemplate Context="verein">
+                        @verein.VereinName
+                    </ResultTemplate>
+                </BlazoredTypeahead>
+            </div>
+            <div class="col-2">
+                <label> Tore Mannschaft 2: </label>
+                <InputNumber @bind-Value="match.Tore_Mannschaft2" class="form-control" />
+            </div>
+        </div>
+        <div class="row topmargin">
+            <div col-4>
+                <label> Liga: </label>
+                <InputSelect class="form-control" id="sel1" @bind-Value="ligastring">
+                    @foreach (var item in ligen)
+                    {
+        <option value="@item.LigaGuid">@item.LigaName</option>}
+
+                </InputSelect>
+            </div>
+            <div class="form-group col-3">
+                <label> Datum: </label>
+                <InputDate @bind-Value="match.Datum" class="form-control" />
+
+            </div>
+            <div class="col-3">
+                <label> Spieltag: </label>
+                <InputSelect class="form-control" id="sel1" @bind-Value="spieltagstring">
+                    <option>Choose Spieltag</option>
+                    @foreach (var item in spieltage)
+                    {
+        <option value="@item.SpieltagGuid # @item.Season">Spieltag: @item.Spieltagzahl  Season: @item.Season</option>}
+
+                </InputSelect>
+
+            </div>
+            @*<div class="col-3">
+            <label> Saison: </label>
+            <InputSelect @bind-Value="saisonstring">
+                <option>21/22</option>
+                <option>20/21</option>
+                <option>19/20</option>
+                <option>18/19</option>
+            </InputSelect>
+        </div>*@
+
+        </div>
+        <div class="row platz">
+            <div class="col-4">
+                <label>Torejäger hinzufügen:</label>
+                <InputText @bind-Value="Torjägerstring"></InputText>
+            </div>
+            <div class="col-3">
+                <label>Tore:</label>
+                <InputNumber @bind-Value="Tore">1</InputNumber>
+            </div>
+            <div class="col-2"><button class="btn btn-info" @onclick="addspieler1">Add Spieler</button></div>
+        </div>
+        <h2>Torjägerliste:</h2>
+        <ul>
+            @foreach (var item in torjägerliste)
+	{
+		 <li>@item.Spielername: @item.Tore</li>
+	}
+        </ul>
+        <div class="form-group knopf">
+            <button type="button" class="btn btn-primary" @onclick="Save">Save Match</button>
+        </div>
+    </div>
+
+    
+
+</EditForm>
+
+
+@code {
+
+    private async Task<IEnumerable<Verein>> GetPeopleLocal(string searchText)
+    {
+        return await Task.FromResult(vereine.Where(x => x.VereinName.ToLower().Contains(searchText.ToLower())).ToList());
+    }
+
+    public void addspieler1()
+    {
+        if (Torjägerstring != "" && Tore != 0)
+        {
+            Torjäger torjäger = new Torjäger();
+
+            torjäger.Tore = Tore;
+            torjäger.Spielername = Torjägerstring;
+            torjägerliste.Add(torjäger);
+
+            Torjägerstring = "";
+            Tore = 0;
+        }
+
+    }
+
+    string Torjägerstring;
+
+    int Tore;
+
+    //string saisonstring = "21/22";
+    Liga liga = new Liga();
+    Spieltag spieltag = new Spieltag();
+    List<Verein> vereine = new List<Verein>();
+    List<Verein> vereinedupe = new List<Verein>();
+    string ligastring;
+    string spieltagstring;
+    List<Spieltag> spieltage = new List<Spieltag>();
+    List<Spieltag> spieltagedupe = new List<Spieltag>();
+    List<Torjäger> torjägerliste = new List<Torjäger>();
+    List<Liga> ligen = new List<Liga>();
+    List<Liga> ligendupe = new List<Liga>();
+    protected override async Task OnInitializedAsync()
+    {
+        spieltage = await service2.GetAllAsync();
+        spieltagedupe = spieltage;
+        ligen = await service3.GetAllAsync();
+        ligendupe = ligen;
+        liga = ligen.First();
+        ligastring = liga.LigaGuid.ToString();
+        spieltag = spieltage.First();
+        spieltagstring = spieltag.SpieltagGuid.ToString();
+        vereine = await service4.GetAllAsync();
+        vereinedupe = vereine;
+
+        match.Datum = DateTime.Now;
+    }
+
+
+
+
+    string filter;
+    Match match = new Match();
+    bool ShowAlert = false;
+
+    private async void Save()
+    {
+        spieltagstring.Trim();
+
+        Guid ligaguid = new Guid(ligastring);
+        string spieltagstring2 = spieltagstring.Substring(0, 36);
+        Guid spieltagguid = new Guid(spieltagstring2);
+        match.LigaId = ligaguid;
+        match.SpieltagGuid = spieltagguid;
+        match.Season = spieltagstring.Substring(39, 5);
+        match.Mannschaft1 = match.SelectedVerein.VereinName;
+        match.Mannschaf2 = match.SelectedVerein2.VereinName;
+        foreach (var item in torjägerliste)
+        {
+            item.LigaId = match.LigaId;
+            item.Saison = match.Season;
+            item.MatchGuid = match.MatchGuid;
+            await service5.AddAsync(item);
+        }
+        match.SelectedVerein = null;
+        match.SelectedVerein2 = null;
+        await service.AddAsync(match);
+        navManager.NavigateTo("fussball/matchindex");
+    }
+
+
+
+
+ }
+
+<style>
+    .topmargin{
+        margin-top:30px;
+        margin-left: 10px;
+    }
+
+    .platz {
+        margin-top: 22px;
+    }
+
+    .knopf{
+        margin-top: 25px;
+    }
+</style>

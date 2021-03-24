@@ -1,0 +1,125 @@
+﻿@inject AuthenticationStateProvider AuthenticationStateProvider
+@inherits OwningComponentBase<JobStatusService>
+@inject NavigationManager navigationManager
+@using QuizApp.Services
+
+<li class="draggable" draggable="true" title="@JobModel.Description" @ondragstart="@(() => HandleDragStart(JobModel))">
+    <p class="description">@JobModel.Description</p>
+    <p class="last-updated"><small>Last Updated</small> @JobModel.LastUpdated.ToString("HH:mm.ss tt")</p>
+    <button class="btn btn-primary"
+            @onclick="(() => EditJobModel(JobModel))">
+        Edit
+    </button>
+</li>
+
+
+@if (ShowPopup)
+{
+    <!-- This is the popup to create or edit a forecast -->
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Bearbeite Jobs</h3>
+                    <!-- Button to close the popup -->
+                    <button type="button" class="close"
+                            @onclick="ClosePopup">
+                        <span aria-hidden="true">X</span>
+                    </button>
+                </div>
+                <!-- Edit form for the current forecast -->
+                <div class="modal-body">
+                    <input class="form-control" type="text"
+                           placeholder="Description"
+                           @bind="objJobModel.Description" />
+                    <br />
+                    <!-- Button to save the forecast -->
+                    <button class="btn btn-primary"
+                            @onclick="SaveForecast">
+                        Save
+                    </button>
+                    <!-- Only show delete button if not a new record -->
+                    <button class="btn btn-primary"
+                            @onclick="DeleteJobModel">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    [CascadingParameter] JobContainer Container { get; set; }
+    [Parameter] public JobModel JobModel { get; set; }
+
+    private void HandleDragStart(JobModel selectedJob)
+    {
+        Container.Payload = selectedJob;
+
+    }
+
+    public void EditJobModel(JobModel jobModel)
+    {
+        // Set the selected forecast
+        // as the current forecast
+        objJobModel = jobModel;
+        // Open the Popup
+        ShowPopup = true;
+    }
+    JobModel objJobModel = new JobModel();
+    bool ShowPopup = false;
+
+    void ClosePopup()
+    {
+        // Close the Popup
+        ShowPopup = false;
+    }
+
+    Random rnd = new Random();
+    async Task SaveForecast()
+    {
+        // Close the Popup
+        ShowPopup = false;
+        // Get the current user
+        var user = (await authenticationStateTask).User;
+        // A new forecast will have the Id set to 0
+       
+       
+            // This is an update
+            var result =
+            @Service.UpdateForecastAsync(objJobModel);
+        
+        // Get the forecasts for the current user
+
+
+
+
+        //await OnInitializedAsync();
+        StateHasChanged();
+
+
+    }
+
+    async Task DeleteJobModel()
+    {
+        // Close the Popup
+        ShowPopup = false;
+        // Get the current user
+        var user = (await authenticationStateTask).User;
+        // Delete the forecast
+        var result = @Service.DeleteForecastAsync(objJobModel);
+        // Get the forecasts for the current user
+        //jobstatus2 =
+        //await @Service.GetJobStatusAsync(user.Identity.Name);
+
+        StateHasChanged();
+        navigationManager.NavigateTo("/deletionconfirmed");
+
+    }
+
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    //List<JobModel> jobstatus2;
+}

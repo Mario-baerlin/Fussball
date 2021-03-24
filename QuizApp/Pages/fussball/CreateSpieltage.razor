@@ -1,0 +1,119 @@
+﻿@page "/spieltagcreate"
+@using QuizApp.Data
+@inject IMatchService service
+@inject ISpieltagService service2
+@inject ILigaService service3
+@inject IVereinService service4
+@inject ITorjägerService service5
+@inject NavigationManager navManager
+    <EditForm Model="spieltag">
+        <div class="row">
+            <div class="col-4">
+                <label> Saison: </label>
+                <InputSelect class="form-control" id="sel1" @bind-Value="saisonstring">
+                    <option>21/22</option>
+                    <option>20/21</option>
+                    <option>19/20</option>
+                    <option>18/19</option>
+                </InputSelect>
+            </div>
+            <div col-4>
+                <label> Liga: </label>
+                <InputSelect class="form-control" id="sel1" @bind-Value="ligastring">
+                    @foreach (var item in ligen)
+                    {
+<option value="@item.LigaGuid">@item.LigaName</option>}
+
+                </InputSelect>
+            </div>
+
+            <div class="form-group updidup col-4">
+                <button type="button" class="btn btn-primary" @onclick="Save">Save Spieltag</button>
+            </div>
+
+        </div>
+    </EditForm>
+    @code { 
+        Spieltag spieltag = new Spieltag();
+
+        Liga liga = new Liga();
+        List<Spieltag> spieltage = new List<Spieltag>();
+        List<Verein> vereine = new List<Verein>();
+        List<Verein> vereinedupe = new List<Verein>();
+        string ligastring;
+        string spieltagstring;
+
+        List<Match> matches = new List<Match>();
+        List<Liga> ligen = new List<Liga>();
+        string saisonstring;
+
+
+        protected override async Task OnInitializedAsync()
+        {
+            saisonstring = "21/22";
+            ligen = await service3.GetAllAsync();
+
+            liga = ligen.First();
+            ligastring = liga.LigaGuid.ToString();
+
+            vereine = await service4.GetAllAsync();
+            vereinedupe = vereine;
+
+        }
+
+        private async void Save()
+        {
+            Guid ligaguid = new Guid(ligastring);
+
+            vereine = vereine.Where(x => x.LigaGuid == ligaguid && x.active == "true").ToList();
+
+            int anzahl = (vereine.Count - 1) * 2;
+
+            for (int i = 0; i < anzahl; i++)
+            {
+                Spieltag spieltag = new Spieltag();
+                spieltag.Spieltagzahl = i + 1;
+
+                spieltag.LigaGuid = ligaguid;
+                spieltag.Season = saisonstring;
+                spieltage.Add(spieltag);
+            }
+            foreach (var item in spieltage)
+            {
+                await service2.AddAsync(item);
+            }
+
+           
+                foreach (var item in vereine)
+                {
+
+                    foreach (var item2 in vereine)
+                    {
+                        if (item.VereinGuid != item2.VereinGuid)
+                        {
+                            Match match = new Match();
+                            match.LigaId = item.LigaGuid;
+                            match.Mannschaft1 = item.VereinName;
+                            match.Mannschaf2 = item2.VereinName;
+                            match.Season = saisonstring;
+                            matches.Add(match);
+                        }
+
+                    }
+                }
+            
+
+
+
+
+
+
+            foreach (var item in matches)
+            {
+                await service.AddAsync(item);
+            }
+
+
+            navManager.NavigateTo("fussball/matchindex");
+        } }
+

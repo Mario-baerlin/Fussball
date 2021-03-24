@@ -1,0 +1,52 @@
+﻿@page "/liga/create"
+
+@inject ILigaService service
+@inject NavigationManager navManager
+
+<h3> Create Product </h3>
+
+<EditForm Model="Liga">
+
+    @*@if (ShowAlert)
+    {
+<div class="alert alert-warning" role="alert">
+    Check if you picked the right Saison to the Date
+</div>}
+    @if (ShowAlert2)
+    {
+<div class="alert alert-warning" role="alert">
+    Der Spieltag muss zwischen 1 und 34 sein.
+</div>}*@
+    
+
+    
+
+    <div class="row">
+        <div class="col-4">
+            <div class="form-group">
+                <label> Spieltag: </label>
+                <InputText @bind-Value="Liga.LigaName" class="form-control" />
+                
+            </div>
+            <div class="form-group">
+                <button type="button" class="btn btn-primary" @onclick="Save">Save Spieltag</button>
+            </div>
+        </div>
+    </div>
+
+</EditForm>
+
+
+@code { 
+    Liga Liga = new Liga();
+
+    //bool ShowAlert = false;
+    //bool ShowAlert2 = false;
+
+    async void Save()
+    {
+
+
+        await service.AddAsync(Liga);
+        navManager.NavigateTo("fussball/indexliga");
+    } }

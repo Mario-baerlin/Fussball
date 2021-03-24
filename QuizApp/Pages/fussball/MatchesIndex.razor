@@ -1,0 +1,127 @@
+﻿@page "/fussball/matchindex"
+
+@inject IMatchService service
+@inject ISpieltagService service2
+@inject ITorjägerService service3
+@inject NavigationManager navManager
+
+<h3> Spieltage </h3>
+
+@if (matches == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <a href="/match/create" class="btn btn-info">Create Spiel</a>
+    <br />
+    <br />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Spieltag</th>
+                <th> Verein 1</th>
+                <th> Ergebnis </th>
+                <th> Verein 2</th>
+               
+                <th> Spieltag </th>
+                @*<th> Edit </th>*@
+                <th> Delete </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var spieltag in joinedlist)
+            {
+                 
+            <tr>
+                <td>@spieltag.spieltagverwaltung.Spieltagzahl</td>
+                <td>@spieltag.spieltag.Mannschaft1</td>
+                <td>@spieltag.spieltag.Tore_Mannschaft1 : @spieltag.spieltag.Tore_Mannschaft2</td>
+                <td>@spieltag.spieltag.Mannschaf2</td>
+              
+                <td>@spieltag.spieltag.Datum</td>
+                @*<td> <a href="/spieltag/edit/@spieltag.spieltag.MatchGuid" class="btn btn-warning">Edit</a> </td>*@
+                <td> <button @onclick="() => Delete(spieltag.spieltag)" class="btn btn-danger">Delete</button> </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    //public EventCallback Saison(Spieltag spieltag)
+    //{
+    //    SpieltagVerwaltung x = new SpieltagVerwaltung();
+    //    x = spieltagverwaltungen.Where(x => x.ID == spieltag.ID).Single();
+    //    string Season = x.Saison;
+
+    //}
+    private async void Delete(Match match)
+    {
+        List<Torjäger> y = await service3.GetAllAsync();
+        y = y.Where(y => y.MatchGuid == match.MatchGuid).ToList();
+        foreach (var item in y)
+        {
+            await service3.DeleteByIdAsync(match.MatchGuid);
+        }
+
+        await service.DeleteAsync(match);
+        matches = new List<Match>();
+        spieltagelist = new List<Spieltag>();
+        joinedlist = new List<Spieltagjoin>();
+        matches = await service.GetAllAsync();
+        spieltagelist = await service2.GetAllAsync();
+
+
+
+
+        foreach (var item in matches)
+        {
+            foreach (var item2 in spieltagelist)
+            {
+                if (item.SpieltagGuid == item2.SpieltagGuid)
+                {
+                    Spieltagjoin spiel = new Spieltagjoin();
+                    spiel.spieltag = item;
+                    spiel.spieltagverwaltung = item2;
+                    joinedlist.Add(spiel);
+                }
+            }
+        }
+        StateHasChanged();
+    }
+    List<Spieltagjoin> joinedlist = new List<Spieltagjoin>();
+    List<Match> matches;
+    List<Spieltag> spieltagelist = new List<Spieltag>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        matches = await service.GetAllAsync();
+        spieltagelist = await service2.GetAllAsync();
+
+        foreach (var item in matches)
+        {
+            foreach (var item2 in spieltagelist)
+            {
+                if (item.SpieltagGuid == item2.SpieltagGuid)
+                {
+                    Spieltagjoin spiel = new Spieltagjoin();
+                    spiel.spieltag = item;
+                    spiel.spieltagverwaltung = item2;
+                    joinedlist.Add(spiel);
+                }
+            }
+        }
+
+
+
+    }
+
+    private void GoToCreatePage()
+    {
+        navManager.NavigateTo("fussball/create");
+    }
+
+}

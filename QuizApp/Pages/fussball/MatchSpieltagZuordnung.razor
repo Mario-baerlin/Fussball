@@ -1,0 +1,146 @@
+﻿@page "/fussball/matchspieltag"
+
+@inject IMatchService service
+@inject ISpieltagService service2
+@inject ITorjägerService service3
+@inject ILigaService service4
+@inject IVereinService service5
+@inject NavigationManager navManager
+
+
+<EditForm Model="match">
+
+  
+
+
+    <div class="row">
+       
+
+            <div class="col-4">
+                <label> Saison: </label>
+                <InputSelect ValueExpression="@(()=>saisonstring)" ValueChanged="@((string value) => OnValueChanged2(value ))" class="form-control" id="sel1">
+                    <option>21/22</option>
+                    <option>20/21</option>
+                    <option>19/20</option>
+                    <option>18/19</option>
+                </InputSelect>
+            </div>
+            <div col-4>
+                <label> Liga: </label>
+                <InputSelect ValueExpression="@(()=>ligastring)" ValueChanged="@((string value) => OnValueChanged(value ))" class="form-control" id="sel1">
+                    @foreach (var item in ligen)
+                    {
+        <option value="@item.LigaGuid">@item.LigaName</option>}
+
+                </InputSelect>
+            </div>
+            <div class="col-4">
+                <label> Verein 1: </label>
+                @*<InputText @bind-Value="match.Mannschaft1" class="form-control" />*@
+
+                <InputSelect @bind-Value="mannschaftstring">
+                    <option>Choose Verein</option>
+                    @foreach (var item in vereinedupe)
+                    {
+                        <option>@item.VereinName</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="form-group updidup">
+                <button type="button" class="btn btn-primary" @onclick="Save">Load Matches</button>
+            </div>
+       
+    </div>
+
+</EditForm>
+
+<table class="table">
+    <thead>
+        <tr>
+            
+            <th scope="col">Verein 1</th>
+            <th scope="col">Verein 2</th>
+            <th scope="col">Saison</th>
+            <th scope="col">Edit</th>
+        </tr>
+    </thead>
+    <tbody>
+
+        @foreach (var item in matchesdupe)
+        {
+        <tr>
+            <td>@item.Mannschaft1</td>
+            <td>@item.Mannschaf2</td>
+            <td>@item.Season</td>
+            <td><a href="/match/edit/@item.MatchGuid.ToString()">Edit</a></td>
+        </tr> }
+            
+                        </tbody>
+    
+</table>
+
+
+
+
+@code { List<Match> matches = new List<Match>();
+    List<Match> matchesdupe = new List<Match>();
+    List<Liga> ligen = new List<Liga>();
+    List<Spieltag> spieltagelist = new List<Spieltag>();
+    List<Verein> vereine = new List<Verein>();
+    List<Verein> vereinedupe = new List<Verein>();
+    Match match = new Match();
+    string saisonstring = "21/22";
+    string ligastring;
+    string mannschaftstring;
+    protected override async Task OnInitializedAsync()
+    {
+        matches = await service.GetAllAsync();
+        spieltagelist = await service2.GetAllAsync();
+        ligen = await service4.GetAllAsync();
+        matchesdupe = matches;
+        vereine = await service5.GetAllAsync();
+        vereinedupe = vereine;
+        ligastring = ligen.First().LigaGuid.ToString();
+    }
+
+    async void Save()
+    {
+        Guid ligaguid = new Guid(ligastring);
+        matchesdupe = matches.Where(x => x.LigaId == ligaguid && x.Season == saisonstring && (x.Mannschaft1 == mannschaftstring || x.Mannschaf2 == mannschaftstring)).ToList();
+    }
+
+    private async Task<IEnumerable<Verein>> GetPeopleLocal(string searchText)
+    {
+        return await Task.FromResult(vereinedupe.Where(x => x.VereinName.ToLower().Contains(searchText.ToLower())).ToList());
+    }
+
+    private Task OnValueChanged(string value)
+    {
+
+
+        // Assign the selected value to the Model 
+        ligastring = value;
+        Guid ligaguid = new Guid(ligastring);
+        vereinedupe = vereine.Where(x => x.LigaGuid == ligaguid).ToList();
+        matchesdupe = new List<Match>();
+        matchesdupe = matches.Where(x => x.LigaId == ligaguid && saisonstring == x.Season).ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+
+    }
+
+    private Task OnValueChanged2(string value)
+    {
+
+
+        // Assign the selected value to the Model 
+        saisonstring = value;
+        Guid ligaguid = new Guid(ligastring);
+        matchesdupe = new List<Match>();
+        
+        matchesdupe = matches.Where(x => x.LigaId == ligaguid && saisonstring == x.Season).ToList();
+        StateHasChanged();
+        return Task.CompletedTask;
+
+    }
+}

@@ -1,0 +1,63 @@
+﻿@page "/fussball/indexliga"
+
+@inject ILigaService service
+@inject NavigationManager navManager
+
+<h3> Spieltage </h3>
+
+@if (ligen == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <a href="/liga/create" class="btn btn-info">Create Liga</a>
+    <br />
+    <br />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Liganame</th>
+               
+                
+                <th> Delete </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var liga in ligen)
+            {
+            <tr>
+                <td>@liga.LigaName</td>
+              
+                
+                <td> <button @onclick="() => Delete(liga)" class="btn btn-danger">Delete</button> </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+
+    List<Liga> ligen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ligen = await service.GetAllAsync();
+    }
+
+    private void GoToCreatePage()
+    {
+        navManager.NavigateTo("fussball/createliga");
+    }
+
+    private async void Delete(Liga liga)
+    {
+        await service.DeleteAsync(liga);
+        ligen = await service.GetAllAsync();
+        StateHasChanged();
+    }
+
+}

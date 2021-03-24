@@ -1,0 +1,349 @@
+﻿@page "/tabelle"
+
+@inject IMatchService service
+@inject ILigaService service2
+@inject IVereinService service3
+@inject ITorjägerService service4
+@inject NavigationManager navManager
+
+@if (tabelle == true)
+{
+
+
+    <h3>Tabelle</h3>
+    <EditForm Model="currentliga">
+        <div class="row">
+            <div class="col-4">
+                <label> Liga: </label>
+                <InputSelect class="form-control" id="sel1" @bind-Value="currentligastring">
+                    @foreach (var item in ligen)
+                        {
+                        <option value="@item.LigaGuid">@item.LigaName</option>}
+
+                </InputSelect>
+            </div>
+            <div class="col-4">
+                <label> Saison: </label>
+                <InputSelect class="form-control" id="sel1" @bind-Value="saisonstring">
+                    <option>21/22</option>
+                    <option>20/21</option>
+                    <option>19/20</option>
+                    <option>18/19</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-2"><button type="button" class="btn btn-primary" @onclick="chooseliga">Update</button></div>
+        </div>
+        
+    </EditForm>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Verein</th>
+                <th scope="col">Matches</th>
+                <th scope="col">Torverhältnis</th>
+                <th scope="col">Punktzahl</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in platzierungen)
+            {
+
+                <tr>
+                    <th scope="row">@item.Platzierung</th>
+                    <td>@item.Vereinsname</td>
+                    <td>@item.Matchanzahl</td>
+                    <td>@item.Torverhältnis</td>
+                    <td>@item.Punktzahl</td>
+                    <td><button class="btn btn-info" @onclick="() =>activatedetails(item)">Details</button></td>
+                </tr>
+
+
+            }
+
+        </tbody>
+    </table>
+}
+
+<button class="btn btn-info" @onclick="opentorjägerliste">Torjägerliste</button>
+
+@if (details == true)
+{
+    <h1>Details von @currentdetails.Vereinsname</h1>
+    <h2>Aktueller Tabellenplatz: @currentdetails.Platzierung</h2>
+    <h2>Absolvierte Spiele: @currentdetails.Matchanzahl</h2>
+    <h2>Aktuelle Punkte: @currentdetails.Punktzahl</h2>
+    <h2>Tore insgesamt: @currentdetails.Tore_Insgesamt</h2>
+    <h2>Gegentore insgesamt: @currentdetails.Gegentore</h2>
+    <h2>Torverhältnis @currentdetails.Torverhältnis</h2>
+    <button class="btn btn-info" @onclick="activatetabelle">Zurück zur Tabelle</button>
+}
+
+@if (torjägerpopup == true)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Torjägerliste</h3>
+                    <!-- Button to close the popup -->
+                    <button type="button" class="close"
+                            @onclick="ClosePopup">
+                        <span aria-hidden="true">X</span>
+                    </button>
+                </div>
+                <!-- Edit form for the current forecast -->
+                <div class="modal-body">
+                    @foreach (var item in torjägerstringlist)
+                    {
+                        <h2>@item.Spielername: @item.Tore</h2>
+                    }
+                </div>
+            </div>
+        </div>
+        </div>
+        }
+
+        @code {
+            string saisonstring = "21/22";
+            bool tabelle = true;
+            bool details = false;
+            string currentligastring;
+            List<Match> matches = new List<Match>();
+            List<Liga> ligen = new List<Liga>();
+            Liga currentliga = new Liga();
+            List<Match> currentmaches = new List<Match>();
+            List<Verein> vereine = new List<Verein>();
+            List<Verein> currentvereine = new List<Verein>();
+            Tabellenplatz currentdetails = new Tabellenplatz();
+            List<Tabellenplatz> platzierungen = new List<Tabellenplatz>();
+            List<Torjäger> torjägerliste = new List<Torjäger>();
+            List<Torjäger> torjägerstringlist = new List<Torjäger>();
+            HashSet<string> torjägerliste2 = new HashSet<string>();
+
+            bool torjägerpopup = false;
+
+            public void opentorjägerliste()
+            {
+                torjägerpopup = true;
+                StateHasChanged();
+            }
+            public void ClosePopup()
+            {
+                torjägerpopup = false;
+                StateHasChanged();
+            }
+
+
+            protected override async Task OnInitializedAsync()
+            {
+                matches = await service.GetAllAsync();
+                ligen = await service2.GetAllAsync();
+                currentliga = ligen.First();
+                currentligastring = currentliga.LigaGuid.ToString();
+                currentmaches = matches.Where(x => x.LigaId == currentliga.LigaGuid && x.Season == saisonstring).ToList();
+                vereine = await service3.GetAllAsync();
+                currentvereine = vereine.Where(x => x.LigaGuid == currentliga.LigaGuid).ToList();
+
+                foreach (var item in currentvereine)
+                {
+                    Tabellenplatz platz = new Tabellenplatz();
+                    platz.Vereinsname = item.VereinName;
+                    platzierungen.Add(platz);
+                }
+
+                int ToreInsgesamt = 0;
+
+                torjägerliste = await service4.GetAllAsync();
+                torjägerliste = torjägerliste.Where(x => x.LigaId == currentliga.LigaGuid && x.Saison == saisonstring).ToList();
+                foreach (var item in torjägerliste)
+                {
+                    torjägerliste2.Add(item.Spielername);
+                }
+
+                foreach (var item in torjägerliste2)
+                {
+                    ToreInsgesamt = 0;
+                    foreach (var item2 in torjägerliste)
+                    {
+                        if (item == item2.Spielername)
+                        {
+                            ToreInsgesamt += item2.Tore;
+                        }
+                    }
+                    Torjäger x = new Torjäger();
+                    x.Tore = ToreInsgesamt;
+                    x.Spielername = item;
+                    torjägerstringlist.Add(x);
+                }
+                torjägerstringlist.OrderByDescending(s => s.Tore);
+                foreach (var platz in platzierungen.ToList())
+                {
+                    foreach (var item2 in currentmaches)
+                    {
+                        if (platz.Vereinsname == item2.Mannschaft1)
+                        {
+
+
+                            platz.Matchanzahl += 1;
+                            if (item2.Tore_Mannschaft1 > item2.Tore_Mannschaft2)
+                            {
+                                platz.Punktzahl += 3;
+                            }
+                            else if (item2.Tore_Mannschaft1 == item2.Tore_Mannschaft2)
+                            {
+                                platz.Punktzahl += 1;
+                            }
+                            platz.Torverhältnis = item2.Tore_Mannschaft1 - item2.Tore_Mannschaft2;
+                            platz.Tore_Insgesamt += item2.Tore_Mannschaft1;
+                            platz.Gegentore += item2.Tore_Mannschaft1;
+                        }
+
+                        else if (platz.Vereinsname == item2.Mannschaf2)
+                        {
+
+                            platz.Matchanzahl += 1;
+                            if (item2.Tore_Mannschaft2 > item2.Tore_Mannschaft1)
+                            {
+                                platz.Punktzahl += 3;
+                            }
+                            else if (item2.Tore_Mannschaft1 == item2.Tore_Mannschaft2)
+                            {
+                                platz.Punktzahl += 1;
+                            }
+                            platz.Torverhältnis = item2.Tore_Mannschaft2 - item2.Tore_Mannschaft1;
+                            platz.Tore_Insgesamt += item2.Tore_Mannschaft2;
+                            platz.Gegentore += item2.Tore_Mannschaft2;
+                        }
+
+                    }
+                }
+                platzierungen = platzierungen.OrderByDescending(x => x.Punktzahl)
+                    .ThenByDescending(x => x.Torverhältnis).ToList();
+                for (int i = 0; i < platzierungen.Count; i++)
+                {
+                    platzierungen[i].Platzierung = i + 1;
+                }
+            }
+
+
+            private async void chooseliga()
+            {
+                Guid ligaguid = new Guid(currentligastring);
+                currentliga = await service2.GetAsync(ligaguid);
+
+                currentmaches = matches.Where(x => x.LigaId == currentliga.LigaGuid && x.Season == saisonstring).ToList();
+
+                currentvereine = vereine.Where(x => x.LigaGuid == currentliga.LigaGuid).ToList();
+                StateHasChanged();
+
+
+                platzierungen = new List<Tabellenplatz>();
+                foreach (var item in currentvereine)
+                {
+                    Tabellenplatz platz = new Tabellenplatz();
+                    platz.Vereinsname = item.VereinName;
+                    platzierungen.Add(platz);
+                }
+
+
+                int ToreInsgesamt = 0;
+                torjägerliste = new List<Torjäger>();
+                torjägerstringlist = new List<Torjäger>();
+                torjägerliste2 = new HashSet<string>();
+                torjägerliste = await service4.GetAllAsync();
+                torjägerliste = torjägerliste.Where(x => x.LigaId == currentliga.LigaGuid && x.Saison == saisonstring).ToList();
+                foreach (var item in torjägerliste)
+                {
+                    torjägerliste2.Add(item.Spielername);
+                }
+
+                foreach (var item in torjägerliste2)
+                {
+                    ToreInsgesamt = 0;
+                    foreach (var item2 in torjägerliste)
+                    {
+                        if (item == item2.Spielername)
+                        {
+                            ToreInsgesamt += item2.Tore;
+                        }
+                    }
+                    Torjäger x = new Torjäger();
+                    x.Tore = ToreInsgesamt;
+                    x.Spielername = item;
+                    torjägerstringlist.Add(x);
+                }
+                torjägerstringlist.OrderByDescending(s => s.Tore);
+                foreach (var platz in platzierungen.ToList())
+                {
+                    foreach (var item2 in currentmaches)
+                    {
+                        if (platz.Vereinsname == item2.Mannschaft1)
+                        {
+
+
+                            platz.Matchanzahl += 1;
+                            if (item2.Tore_Mannschaft1 > item2.Tore_Mannschaft2)
+                            {
+                                platz.Punktzahl += 3;
+                            }
+                            else if (item2.Tore_Mannschaft1 == item2.Tore_Mannschaft2)
+                            {
+                                platz.Punktzahl += 1;
+                            }
+                            platz.Torverhältnis = item2.Tore_Mannschaft1 - item2.Tore_Mannschaft2;
+                            platz.Tore_Insgesamt += item2.Tore_Mannschaft1;
+                            platz.Gegentore += item2.Tore_Mannschaft1;
+                            //platzierungen.Add(platz);
+                        }
+
+                        else if (platz.Vereinsname == item2.Mannschaf2)
+                        {
+
+                            platz.Matchanzahl += 1;
+                            if (item2.Tore_Mannschaft2 > item2.Tore_Mannschaft1)
+                            {
+                                platz.Punktzahl += 3;
+                            }
+                            else if (item2.Tore_Mannschaft1 == item2.Tore_Mannschaft2)
+                            {
+                                platz.Punktzahl += 1;
+                            }
+                            platz.Torverhältnis = item2.Tore_Mannschaft2 - item2.Tore_Mannschaft1;
+                            platz.Tore_Insgesamt += item2.Tore_Mannschaft2;
+                            platz.Gegentore += item2.Tore_Mannschaft2;
+                            //platzierungen.Add(platz);
+                        }
+
+                    }
+                }
+                platzierungen = platzierungen.OrderByDescending(x => x.Punktzahl).ThenByDescending(x => x.Torverhältnis).ToList();
+                for (int i = 0; i < platzierungen.Count; i++)
+                {
+                    platzierungen[i].Platzierung = i + 1;
+                }
+                StateHasChanged();
+
+            }
+
+
+            public void activatedetails(Tabellenplatz item)
+            {
+                tabelle = false;
+                currentdetails = item;
+                details = true;
+                StateHasChanged();
+            }
+
+            public void activatetabelle()
+            {
+                details = false;
+                currentdetails = new Tabellenplatz();
+                tabelle = true;
+                StateHasChanged();
+            }
+
+
+        }

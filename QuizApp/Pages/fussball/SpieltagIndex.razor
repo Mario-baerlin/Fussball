@@ -1,0 +1,63 @@
+﻿@page "/fussball/indexspieltag"
+
+@inject ISpieltagService service
+@inject NavigationManager navManager
+
+<h3> Spieltage </h3>
+
+@if (spieltage == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <a href="/spieltag/create" class="btn btn-info">Create Spieltag</a>
+    <br />
+    <br />
+
+    <table class="table">
+        <thead>
+            <tr>
+              
+               <th>Saison</th>
+                <th>Edit</th>
+                <th> Delete </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var spieltag in spieltage)
+            {
+            <tr>
+                
+                <td>@spieltag.Season</td>
+                <td> <a href="/spieltag/edit/@spieltag.SpieltagGuid" class="btn btn-info">Edit</a> </td>
+                <td> <button @onclick="() => Delete(spieltag)" class="btn btn-danger">Delete</button> </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+
+    List<Spieltag> spieltage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        spieltage = await service.GetAllAsync();
+    }
+
+    private void GoToCreatePage()
+    {
+        navManager.NavigateTo("fussball/createliga");
+    }
+
+    private async void Delete(Spieltag spieltag)
+    {
+        await service.DeleteAsync(spieltag);
+        spieltage = await service.GetAllAsync();
+        StateHasChanged();
+    }
+
+}

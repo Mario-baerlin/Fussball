@@ -1,0 +1,200 @@
+﻿@page "/todoooo"
+@using QuizApp.Pages.Shared
+@using QuizApp.Services
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inherits OwningComponentBase<JobStatusService>
+@attribute [Authorize]
+
+@if (Jobs.Count > 0)
+{
+    <div class="progress my-2">
+        <div class="progress-bar" role="progressbar" style="width: @(percentDone)%" aria-valuemin="0" aria-valuemax="100">@(percentDone)%</div>
+    </div>
+}
+
+<JobContainer Jobs="Jobs" OnStatusUpdated="HandleStatusUpdated">
+    <JobList ListStatus="JobStatuses.Todo" AllowedStatuses="@(new JobStatuses[] { JobStatuses.Started})" />
+    <JobList ListStatus="JobStatuses.Started" AllowedStatuses="@(new JobStatuses[] { JobStatuses.Todo})" />
+    <JobList ListStatus="JobStatuses.Completed" AllowedStatuses="@(new JobStatuses[] { JobStatuses.Started })" />
+</JobContainer>
+
+
+<p>
+    <!-- Add a new forecast -->
+    <button class="btn btn-primary"
+            @onclick="AddNewJob">
+        Add New Job
+    </button>
+</p>
+
+<hr />
+<p>Last updated job was: <strong>@lastUpdatedJob</strong></p>
+<hr />
+
+@foreach (var task in Jobs)
+{
+    <p>@task.Description - <strong>@task.Status</strong></p>
+}
+
+@if (ShowPopup)
+{
+    <!-- This is the popup to create or edit a forecast -->
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">Bearbeite Jobs</h3>
+                    <!-- Button to close the popup -->
+                    <button type="button" class="close"
+                            @onclick="ClosePopup">
+                        <span aria-hidden="true">X</span>
+                    </button>
+                </div>
+                <!-- Edit form for the current forecast -->
+                <div class="modal-body">
+                    <input class="form-control" type="text"
+                           placeholder="Description"
+                           @bind="objJobModel.Description" />
+                    <br />
+                    <!-- Button to save the forecast -->
+                    <button class="btn btn-primary"
+                            @onclick="SaveForecast">
+                        Save
+                    </button>
+                    <!-- Only show delete button if not a new record -->
+                   
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    List<JobModel> x = new List<JobModel>();
+    private int percentDone { get
+        {
+            x = Jobs.Where(x => x.Status == JobStatuses.Completed).ToList();
+            return x.Count * 100 / Jobs.Count;
+        }
+    }
+    List<JobModel> Jobs = new List<JobModel>();
+    string lastUpdatedJob = "";
+
+    //protected override void OnInitialized()
+    //{
+    //    Jobs.Add(new JobModel { Id = 1, Description = "Mow the lawn", Status = JobStatuses.Todo, LastUpdated = DateTime.Now });
+    //    Jobs.Add(new JobModel { Id = 2, Description = "Go to the gym", Status = JobStatuses.Todo, LastUpdated = DateTime.Now });
+    //    Jobs.Add(new JobModel { Id = 3, Description = "Call Ollie", Status = JobStatuses.Todo, LastUpdated = DateTime.Now });
+    //    Jobs.Add(new JobModel { Id = 4, Description = "Fix bike tyre", Status = JobStatuses.Todo, LastUpdated = DateTime.Now });
+    //    Jobs.Add(new JobModel { Id = 5, Description = "Finish blog post", Status = JobStatuses.Todo, LastUpdated = DateTime.Now });
+    //}
+
+    void HandleStatusUpdated(JobModel updatedJob)
+    {
+        lastUpdatedJob = updatedJob.Description;
+        updatedJob.LastUpdated = DateTime.Now;
+        // This is an update
+        var result =
+        @Service.UpdateForecastAsync(updatedJob);
+    }
+
+
+
+    // AuthenticationState is available as a CascadingParameter
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+    List<JobModel> jobstatus2;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get the current user
+        var user = (await authenticationStateTask).User;
+        // Get the forecasts for the current user
+        // We access WeatherForecastService using @Service
+        jobstatus2 = await @Service.GetJobStatusAsync(user.Identity.Name);
+
+
+        foreach (var item in jobstatus2)
+        {
+            Jobs.Add(new JobModel { Description = item.Description, Id = item.Id, LastUpdated = item.LastUpdated, Status = item.Status });
+        }
+    }
+
+    JobModel objJobModel = new JobModel();
+
+
+    void AddNewJob()
+    {
+        // Make new forecast
+        objJobModel = new JobModel();
+        // Set Id to 0 so we know it is a new record
+
+        // Open the Popup
+        ShowPopup = true;
+    }
+    bool ShowPopup = false;
+
+    void ClosePopup()
+    {
+        // Close the Popup
+        ShowPopup = false;
+    }
+    Random rnd = new Random();
+    async Task SaveForecast()
+    {
+        // Close the Popup
+        ShowPopup = false;
+        // Get the current user
+        var user = (await authenticationStateTask).User;
+        // A new forecast will have the Id set to 0
+
+        // Create new forecast
+        JobModel objNewJobModel = new JobModel();
+        objNewJobModel.LastUpdated = System.DateTime.Now;
+        objNewJobModel.Description = objJobModel.Description;
+        objNewJobModel.Status = JobStatuses.Todo;
+        objNewJobModel.Id = Guid.NewGuid();
+        objNewJobModel.UserName = user.Identity.Name;
+        // Save the result
+        var result =
+        @Service.CreateJobModelAsync(objNewJobModel);
+
+
+
+        // Get the forecasts for the current user
+
+
+        Jobs =
+    await @Service.GetJobStatusAsync(user.Identity.Name);
+
+        //await OnInitializedAsync();
+        StateHasChanged();
+
+
+    }
+
+    async Task DeleteJobModel()
+    {
+        // Close the Popup
+        ShowPopup = false;
+        // Get the current user
+        var user = (await authenticationStateTask).User;
+        // Delete the forecast
+        var result = @Service.DeleteForecastAsync(objJobModel);
+        // Get the forecasts for the current user
+        jobstatus2 =
+        await @Service.GetJobStatusAsync(user.Identity.Name);
+
+
+    }
+
+    public void EditJobModel(JobModel jobModel)
+    {
+        // Set the selected forecast
+        // as the current forecast
+        objJobModel = jobModel;
+        // Open the Popup
+        ShowPopup = true;
+    }
+}
